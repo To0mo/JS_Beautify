@@ -3,75 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Userscript Ultra Cleaner Pro</title>
+    <title>Userscript Formatter (Full JP Translation)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jshint/2.13.6/jshint.min.js"></script>
     <style>
         :root {
-            --bg: #f3f4f6;
-            --primary: #2563eb;
+            --bg: #0f172a;
+            --primary: #3b82f6;
             --secondary: #10b981;
-            --border: #d1d5db;
-            --editor-bg: #ffffff;
-            --line-num-bg: #f8fafc;
-            --line-num-text: #94a3b8;
-            --lh: 18px; 
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+            --editor-bg: #1e293b;
+            --line-num-bg: #0f172a;
+            --text-color: #f1f5f9;
+            --lh: 20px;
         }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; background-color: var(--bg); }
-        body { display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; }
-
-        /* Header & Settings */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .settings {
-            background: white; padding: 8px 12px; border-radius: 8px;
-            display: flex; gap: 12px; margin-bottom: 10px; border: 1px solid var(--border);
-            flex-wrap: wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        body {
+            height: 100vh; margin: 0; padding: 10px; overflow: hidden;
+            font-family: 'Consolas', 'Monaco', monospace; background: var(--bg); color: var(--text-color);
+            display: flex; flex-direction: column; box-sizing: border-box;
         }
-        label { font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-
-        /* Main Editor Layout */
-        .main { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
-        @media (max-width: 768px) { .main { grid-template-columns: 1fr; } }
-
-        .pane { display: flex; flex-direction: column; min-height: 0; background: white; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
-        .bar { display: flex; justify-content: space-between; padding: 5px 10px; background: #1e293b; color: #cbd5e1; font-size: 10px; font-weight: bold; }
-
-        .editor-container { flex: 1; position: relative; display: flex; overflow: hidden; }
-        .line-numbers-wrapper { width: 42px; background: var(--line-num-bg); border-right: 1px solid var(--border); overflow: hidden; position: relative; pointer-events: none; }
-        .line-numbers-content { position: absolute; top: 0; width: 100%; padding: 10px 0; text-align: right; font-family: monospace; font-size: 11px; line-height: var(--lh); color: var(--line-num-text); will-change: transform; }
-        .line-numbers-content span { display: block; padding-right: 5px; }
-
-        textarea { flex: 1; border: none; padding: 10px; font-family: 'Consolas', monospace; font-size: 12px; line-height: var(--lh); outline: none; background: transparent; resize: none; white-space: pre; overflow: auto; box-sizing: border-box; }
-
-        /* Modal Settings */
-        #modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;
-        }
-        .modal {
-            background: white; width: 90%; max-width: 600px; max-height: 80vh;
-            border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-        }
-        .modal-header { padding: 15px; border-bottom: 1px solid var(--border); background: #f9fafb; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 10px; }
-        .modal-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
         
-        .comment-item {
-            display: flex; gap: 10px; padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; align-items: flex-start;
+        .header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        .settings {
+            background: #1e293b; padding: 8px; border-radius: 6px; border: 1px solid var(--border);
+            display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 10px; align-items: center;
         }
-        .comment-item:hover { background: #f0f7ff; }
-        .comment-text { font-family: monospace; color: #475569; word-break: break-all; }
+        label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; user-select: none; }
+        
+        /* Error Navigation Bar */
+        #error-nav {
+            display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger);
+            border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;
+            align-items: center; gap: 15px; color: #fca5a5;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .nav-controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .nav-btn {
+            background: var(--danger); border: none; color: white; border-radius: 4px;
+            width: 28px; height: 28px; cursor: pointer; font-weight: bold; display: flex;
+            align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .nav-btn:hover { background: #dc2626; }
+        
+        .error-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        /* エラーメッセージ（赤） */
+        .error-msg { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* ヒント（黄） */
+        .fix-hint { 
+            font-size: 12px; color: #fbbf24; margin-top: 3px; 
+            display: flex; align-items: center; gap: 6px;
+            font-weight: normal;
+        }
 
-        .footer { display: flex; justify-content: center; gap: 10px; padding: 10px 0; }
-        button { padding: 10px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-main { background: var(--primary); color: white; }
-        .btn-copy { background: var(--secondary); color: white; }
-        .btn-cancel { background: #e5e7eb; color: #374151; }
-        button:active { transform: scale(0.98); }
+        /* Editor */
+        .main { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+        .pane { display: flex; flex-direction: column; background: var(--editor-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; position: relative; }
+        .bar { padding: 5px 10px; background: #334155; font-size: 11px; font-weight: bold; color: #94a3b8; display: flex; justify-content: space-between; }
+        
+        .editor-container { flex: 1; position: relative; display: flex; overflow: hidden; }
+        .line-numbers {
+            width: 45px; background: var(--line-num-bg); border-right: 1px solid var(--border);
+            text-align: right; padding: 10px 5px; font-size: 12px; line-height: var(--lh); color: #475569;
+            user-select: none; overflow: hidden; white-space: pre;
+        }
+        .line-numbers div { height: var(--lh); }
+        textarea {
+            flex: 1; background: transparent; border: none; padding: 10px; color: inherit;
+            font-family: inherit; font-size: 13px; line-height: var(--lh); resize: none; outline: none;
+            white-space: pre; overflow: auto; tab-size: 4;
+        }
+        textarea::selection { background-color: rgba(220, 38, 38, 0.6); color: white; }
+
+        .footer { padding-top: 10px; display: flex; justify-content: center; gap: 10px; }
+        button.action-btn {
+            padding: 10px 30px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #exec-btn { background: var(--primary); }
+        #exec-btn:hover:not(:disabled) { background: #2563eb; }
+        #copy-btn { background: var(--secondary); }
+
+        /* Modal */
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99; justify-content: center; align-items: center; }
+        .modal-box { background: #1e293b; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; border-radius: 8px; border: 1px solid var(--border); }
+        .modal-body { flex: 1; overflow-y: auto; padding: 10px; }
+        .comment-row { display: flex; gap: 10px; padding: 8px; border-bottom: 1px solid #334155; font-size: 12px; align-items: flex-start; }
+        .comment-text { white-space: pre-wrap; word-break: break-all; color: #94a3b8; flex: 1; }
+        .modal-foot { padding: 10px; border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 10px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1 style="font-size: 0.9rem; margin:0; color:#475569;">Userscript Cleaner Pro <span id="status" style="color:var(--primary); font-weight:bold; margin-left:10px;">Ready</span></h1>
+    <h1 style="margin:0; font-size:16px; color:#e2e8f0;">Userscript Cleaner <span style="color:var(--primary); font-size:0.8em; margin-left:10px;">Full JP Translation</span></h1>
 </div>
 
 <div class="settings">
@@ -81,252 +107,405 @@
     <label><input type="checkbox" id="remove-empty" checked> 空白行消す</label>
 </div>
 
+<!-- Error Navigation -->
+<div id="error-nav">
+    <div class="nav-controls">
+        <button class="nav-btn" title="前へ" onclick="prevError()">&#8592;</button>
+        <span id="error-count" style="font-family:monospace; font-size:14px; min-width:45px; text-align:center;">0/0</span>
+        <button class="nav-btn" title="次へ" onclick="nextError()">&#8594;</button>
+    </div>
+    <div class="error-info">
+        <span id="error-msg" class="error-msg"></span>
+        <span id="fix-hint" class="fix-hint"></span>
+    </div>
+</div>
+
 <div class="main">
     <div class="pane">
-        <div class="bar">INPUT <span id="in-count">0 lines</span></div>
+        <div class="bar">INPUT <span id="in-lines">0 lines</span></div>
         <div class="editor-container">
-            <div class="line-numbers-wrapper"><div id="in-line-nums" class="line-numbers-content"></div></div>
-            <textarea id="input-text" spellcheck="false" wrap="off" placeholder="Paste here..."></textarea>
+            <div class="line-numbers" id="in-nums"><div>1</div></div>
+            <textarea id="input" placeholder="ここにコードを貼り付けてください..." spellcheck="false"></textarea>
         </div>
     </div>
     <div class="pane">
-        <div class="bar">OUTPUT <span id="out-count">0 lines</span></div>
+        <div class="bar">OUTPUT <span id="out-lines">0 lines</span></div>
         <div class="editor-container">
-            <div class="line-numbers-wrapper"><div id="out-line-nums" class="line-numbers-content"></div></div>
-            <textarea id="output-text" readonly wrap="off" placeholder="Result..."></textarea>
+            <div class="line-numbers" id="out-nums"><div>1</div></div>
+            <textarea id="output" readonly placeholder="実行結果..." spellcheck="false"></textarea>
         </div>
     </div>
 </div>
 
 <div class="footer">
-    <button class="btn-main" id="exec-btn">実行する</button>
-    <button class="btn-copy" id="copy-btn">結果をコピー</button>
+    <button id="exec-btn" class="action-btn">実行する</button>
+    <button id="copy-btn" class="action-btn">結果をコピー</button>
 </div>
 
-<!-- コメント選択モーダル -->
-<div id="modal-overlay">
-    <div class="modal">
-        <div class="modal-header">
-            <h3 style="margin:0; font-size:14px;">削除するコメントを選択</h3>
-            <label style="font-size:11px;"><input type="checkbox" id="select-all" checked> 全選択</label>
+<!-- Modal -->
+<div id="modal">
+    <div class="modal-box">
+        <div class="bar" style="border-radius:8px 8px 0 0; padding:10px;">
+            <span>削除するコメントを選択</span>
+            <label><input type="checkbox" id="check-all" checked> 全選択/解除</label>
         </div>
-        <div class="modal-body" id="comment-list">
-            <!-- ここにコメント一覧が表示される -->
-        </div>
-        <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
-            <button class="btn-main" id="confirm-remove">選択したものを削除して続行</button>
+        <div class="modal-body" id="comment-list"></div>
+        <div class="modal-foot">
+            <button class="action-btn" onclick="closeModal()" style="background:#475569">キャンセル</button>
+            <button class="action-btn" id="confirm-del" style="background:var(--primary)">削除して続行</button>
         </div>
     </div>
 </div>
 
-<script id="worker-script" type="text/javascript">
-    self.onmessage = function(e) {
-        const { code, options, selectedComments } = e.data;
-        let metadata = "";
-        let workingCode = code;
-        
-        // 1. メタデータ保護
-        const metaRegex = /\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==/;
-        const metaMatch = code.match(metaRegex);
-        if (metaMatch) {
-            metadata = metaMatch[0];
-            workingCode = code.replace(metaMatch[0], "___METADATA_PLACEHOLDER___");
-        }
-
-        // 2. コメント処理（選択削除の場合）
-        if (selectedComments) {
-            // 逆順で置換（位置がずれないように）
-            selectedComments.sort((a,b) => b.start - a.start).forEach(comment => {
-                const before = workingCode.substring(0, comment.start);
-                const after = workingCode.substring(comment.end);
-                workingCode = before + after;
-            });
-        }
-
-        // 3. コンソール削除
-        if (options.removeConsole) {
-            workingCode = workingCode.replace(/console\.(log|debug|info|warn|error|dir|table|trace|group|groupEnd|time|timeEnd)\s*\([\s\S]*?\);?/g, "");
-        }
-
-        // 4. 行処理
-        const lines = workingCode.split(/\r?\n/);
-        const processed = [];
-        let indentLevel = 0;
-        const indentStr = "    ";
-
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (line === "___METADATA_PLACEHOLDER___") {
-                processed.push(metadata);
-                continue;
-            }
-            if (options.removeEmpty && line === "") continue;
-
-            if (options.fixLines) {
-                const openBraces = (line.match(/\{/g) || []).length;
-                const closeBraces = (line.match(/\}/g) || []).length;
-                if (line.startsWith('}')) {
-                    indentLevel = Math.max(0, indentLevel - 1);
-                    processed.push(indentStr.repeat(indentLevel) + line);
-                    indentLevel += openBraces - (closeBraces - 1);
-                } else {
-                    processed.push(indentStr.repeat(indentLevel) + line);
-                    indentLevel += (openBraces - closeBraces);
-                }
-                if (indentLevel < 0) indentLevel = 0;
-            } else {
-                processed.push(lines[i]);
-            }
-        }
-
-        let finalCode = processed.join('\n').trim();
-        if (options.removeEmpty) finalCode = finalCode.replace(/\n\s*\n\s*\n/g, '\n\n');
-        self.postMessage({ finalCode });
-    };
-</script>
-
 <script>
-    const inputArea = document.getElementById('input-text');
-    const outputArea = document.getElementById('output-text');
-    const inLineNums = document.getElementById('in-line-nums');
-    const outLineNums = document.getElementById('out-line-nums');
-    const execBtn = document.getElementById('exec-btn');
-    const statusLabel = document.getElementById('status');
-    const modal = document.getElementById('modal-overlay');
-    const commentList = document.getElementById('comment-list');
-
+    const $ = id => document.getElementById(id);
+    const input = $('input'), output = $('output');
     let detectedComments = [];
+    let syntaxErrors = [];
+    let currentErrorIndex = -1;
 
-    // Worker設定
-    const blob = new Blob([document.getElementById('worker-script').textContent], {type: 'text/javascript'});
-    const worker = new Worker(window.URL.createObjectURL(blob));
+    // --- 【強化版】エラーメッセージ翻訳エンジン ---
+    function translateError(msg, evidence) {
+        if (!msg) return "不明なエラー";
+        let translated = msg;
 
-    // コメント抽出用正規表現 (文字列内を除外)
-    function findComments(text) {
-        const comments = [];
-        const regex = /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm;
-        let match;
-        // メタデータを除外した範囲で検索
-        const metaRegex = /\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==/;
-        const metaMatch = text.match(metaRegex);
-        const metaStart = metaMatch ? text.indexOf(metaMatch[0]) : -1;
-        const metaEnd = metaMatch ? metaStart + metaMatch[0].length : -1;
-
-        while ((match = regex.exec(text)) !== null) {
-            if (match.index >= metaStart && match.index < metaEnd) continue;
-            comments.push({
-                start: match.index + (match[1] ? match[1].length : 0),
-                end: regex.lastIndex,
-                text: match[0].trim()
-            });
+        // --- 1. 変数・定義系 ---
+        if (msg.match(/'(.*)' is not defined/)) {
+            translated = msg.replace(/'(.*)' is not defined/, "変数 '$1' は定義されていません (宣言漏れ)。");
+        } else if (msg.match(/'(.*)' is already defined/)) {
+            translated = msg.replace(/'(.*)' is already defined/, "変数 '$1' は既に定義されています (重複宣言)。");
+        } else if (msg.match(/Attempting to override '(.*)' which is a constant/)) {
+            translated = msg.replace(/Attempting to override '(.*)' which is a constant/, "定数 '$1' を書き換えようとしています。");
+        } else if (msg.match(/Read only/)) {
+            translated = "読み取り専用のプロパティには代入できません。";
         }
-        return comments;
+
+        // --- 2. 構文・記号系 (Expected / Unexpected) ---
+        else if (msg.match(/Expected '(.*)' and instead saw '(.*)'/)) {
+            // 例: Expected '}' and instead saw 'return'
+            translated = msg.replace(/Expected '(.*)' and instead saw '(.*)'/, "本来 '$1' があるべき場所に '$2' があります。");
+        } else if (msg.match(/Unexpected '(.*)'/)) {
+            translated = msg.replace(/Unexpected '(.*)'/, "ここに文字 '$1' は置けません（予期しない文字）。");
+        } else if (msg.match(/Expected an identifier and instead saw '(.*)'/)) {
+            translated = msg.replace(/Expected an identifier and instead saw '(.*)'/, "変数名などの識別子が必要ですが、代わりに '$1' があります。");
+        } else if (msg.match(/Expected an operator and instead saw '(.*)'/)) {
+            translated = msg.replace(/Expected an operator and instead saw '(.*)'/, "演算子(+, -, = 等)が必要ですが、代わりに '$1' があります。");
+        } else if (msg.match(/Expected an assignment or function call/)) {
+            translated = "代入式か関数呼び出しであるべきですが、式の結果が使われていません。";
+        }
+
+        // --- 3. 括弧・ブロック系 ---
+        else if (msg.match(/Unmatched '(.*)'/)) {
+            translated = msg.replace(/Unmatched '(.*)'/, "対応する括弧 '$1' が見つかりません (閉じ忘れ/過剰)。");
+        } else if (msg.match(/Missing semicolon/)) {
+            translated = "行末にセミコロン ';' が抜けています。";
+        } else if (msg.match(/Unnecessary semicolon/)) {
+            translated = "不要なセミコロン ';' があります。";
+        } else if (msg.match(/Unexpected early end of program/)) {
+            translated = "コードが途中で途切れています (閉じ括弧 '}' などが足りません)。";
+        } else if (msg.match(/Don't make functions within a loop/)) {
+            translated = "ループの中で関数を作成するのは推奨されません。";
+        }
+
+        // --- 4. 文字列・数値系 ---
+        else if (msg.match(/Unclosed string/)) {
+            translated = "文字列が閉じられていません (クォートの忘れ)。";
+        } else if (msg.match(/Unclosed regular expression/)) {
+            translated = "正規表現が閉じられていません。";
+        } else if (msg.match(/A leading decimal point can be confused with a dot/)) {
+            translated = "先頭の小数点はドット演算子と紛らわしいです ('0.5' と書いてください)。";
+        } else if (msg.match(/Trailing decimal point/)) {
+            translated = "末尾の小数点は紛らわしいです。";
+        }
+
+        // --- 5. 比較・論理系 ---
+        else if (msg.match(/Use '===' to compare/)) {
+            translated = "比較には厳密な '===' を使用してください。";
+        } else if (msg.match(/Confusing use of '!'/)) {
+            translated = "'!' の使い方が紛らわしいです。";
+        } else if (msg.match(/Bad option/)) {
+            translated = "JSHintの設定オプションが不正です。";
+        } else if (msg.match(/This is an ES(.*) feature/)) {
+            translated = "これは新しいJavaScript(ES$1)の機能です。";
+        }
+
+        // --- 6. 汎用置換 (上記に漏れた場合用) ---
+        // 最後に残った英語の専門用語を置換する
+        translated = translated
+            .replace("Expected", "期待される文字:")
+            .replace("Unexpected", "予期せぬ:")
+            .replace("identifier", "識別子(変数名)")
+            .replace("operator", "演算子")
+            .replace("string", "文字列")
+            .replace("number", "数値")
+            .replace("at line", "行:")
+            .replace("character", "文字目");
+
+        return translated;
     }
 
-    function updateLineNumbers(textarea, lineNumDiv, countElId) {
-        const count = textarea.value.split('\n').length;
-        let html = '';
-        for (let i = 1; i <= count; i++) html += '<span>' + i + '</span>';
-        lineNumDiv.innerHTML = html;
-        document.getElementById(countElId).textContent = count.toLocaleString() + " lines";
-    }
+    // --- AI風ヒント生成 ---
+    function generateFixHint(err) {
+        const msg = (err.reason || "").toLowerCase();
+        const code = (err.evidence || "").trim();
+        const rawCode = err.evidence || "";
 
-    function syncScroll(area, nums) {
-        let ticking = false;
-        area.addEventListener('scroll', () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    nums.style.transform = `translateY(${-area.scrollTop}px)`;
-                    ticking = false;
-                });
-                ticking = true;
+        // 1. タイプミス系
+        if (code.match(/\bcon\b/) && !code.match(/\bconsole\b/)) return "変数宣言の 'const' を 'con' と書き間違えていませんか？";
+        if (code.match(/\bfuction\b/)) return "'function' のスペルミス (fuction) です。";
+        if (code.match(/\bretun\b|\bretrun\b|\burn\b/)) return "'return' のスペルミス (urn, retunなど) です。";
+        if (code.match(/\bvarible\b/)) return "'variable' のスペルミスです。";
+        if (code.match(/\blenght\b/)) return ".length のスペルミス (lenght) です。";
+        if (code.match(/\biff\b/)) return "'if' 文のスペルミス (iff) です。";
+        if (code.match(/\beles\b|\bels\b/)) return "'else' のスペルミスです。";
+        
+        // 2. 構文系
+        if (msg.includes("missing semicolon")) return "行末にセミコロン ';' を追加してください。";
+        if (msg.includes("unmatched")) return "対応する括弧 {} [] () が見つかりません。数を確認してください。";
+        if (msg.includes("is not defined")) return "let または const で変数を宣言してください。";
+        
+        // 3. 記号系
+        if (code.includes("=>") && (msg.includes("expected") || msg.includes("identifier"))) {
+            return "アロー関数の書き方を確認してください。";
+        }
+        if (msg.includes("unexpected token") && code.includes(":")) {
+            if (!code.match(/\{.*\}/) && !code.match(/case\s+.*:/)) {
+                return "ここで ':' は使えません。代入なら '=' です。";
             }
-        });
+        }
+
+        // 4. 文字列系
+        if (msg.includes("unterminated string")) return "文字列の終わりが見つかりません。クォートを閉じてください。";
+        
+        // 5. 全角文字
+        if (rawCode.match(/[　]/)) return "全角スペースが含まれています。半角に直してください。";
+        if (rawCode.match(/[：；，（）]/)) return "全角記号が含まれています。半角に直してください。";
+
+        return "赤くハイライトされた箇所周辺の記号やスペルを確認してください。";
     }
 
-    syncScroll(inputArea, inLineNums);
-    syncScroll(outputArea, outLineNums);
+    // --- エラー表示制御 ---
+    function updateErrorDisplay() {
+        const nav = $('error-nav');
+        if (syntaxErrors.length === 0) {
+            nav.style.display = 'none';
+            return;
+        }
+        
+        nav.style.display = 'flex';
+        const err = syntaxErrors[currentErrorIndex];
+        
+        // エラーカウントと日本語化されたメッセージを表示
+        $('error-count').textContent = `${currentErrorIndex + 1} / ${syntaxErrors.length}`;
+        $('error-msg').textContent = `Line ${err.line}: ${translateError(err.reason, err.evidence)}`;
+        
+        // ヒント
+        const hint = generateFixHint(err);
+        $('fix-hint').innerHTML = hint ? `💡 ${hint}` : '';
+        
+        jumpToError(err);
+    }
 
-    inputArea.addEventListener('input', () => updateLineNumbers(inputArea, inLineNums, 'in-count'));
+    function jumpToError(err) {
+        input.focus();
+        const lineHeight = 20; 
+        const scrollPos = (err.line - 1) * lineHeight - (input.clientHeight / 2);
+        input.scrollTop = scrollPos;
 
-    // 実行フロー
-    execBtn.addEventListener('click', () => {
-        const code = inputArea.value;
+        const lines = input.value.split('\n');
+        let charIndex = 0;
+        for (let i = 0; i < err.line - 1; i++) {
+            charIndex += lines[i].length + 1; 
+        }
+        const lineText = lines[err.line - 1] || "";
+        input.setSelectionRange(charIndex, charIndex + lineText.length);
+    }
+
+    function prevError() {
+        if (syntaxErrors.length === 0) return;
+        currentErrorIndex = (currentErrorIndex - 1 + syntaxErrors.length) % syntaxErrors.length;
+        updateErrorDisplay();
+    }
+
+    function nextError() {
+        if (syntaxErrors.length === 0) return;
+        currentErrorIndex = (currentErrorIndex + 1) % syntaxErrors.length;
+        updateErrorDisplay();
+    }
+
+    // --- メイン処理 ---
+    async function startProcess() {
+        const code = input.value;
         if (!code.trim()) return;
 
-        if (document.getElementById('remove-comments').checked) {
+        $('exec-btn').disabled = true;
+        $('error-nav').style.display = 'none';
+        syntaxErrors = [];
+
+        // 1. JSHint チェック
+        const options = { 
+            esversion: 11, browser: true, devel: true, 
+            asi: true, undef: false, '-W041': true
+        };
+        JSHINT(code, options);
+        
+        const criticalErrors = JSHINT.errors.filter(e => e && e.code && e.code.startsWith('E'));
+
+        if (criticalErrors.length > 0) {
+            syntaxErrors = criticalErrors;
+            currentErrorIndex = 0;
+            updateErrorDisplay();
+            $('exec-btn').disabled = false;
+            return; // エラー時はここで中断
+        }
+
+        // 2. コメント選択
+        if ($('remove-comments').checked) {
             detectedComments = findComments(code);
             if (detectedComments.length > 0) {
-                showCommentModal();
+                showModal();
+                $('exec-btn').disabled = false;
                 return;
             }
         }
-        startProcessing(null);
-    });
 
-    function showCommentModal() {
-        commentList.innerHTML = '';
-        detectedComments.forEach((c, i) => {
-            const div = document.createElement('div');
-            div.className = 'comment-item';
-            div.innerHTML = `
-                <input type="checkbox" class="comment-chk" data-idx="${i}" checked>
-                <div class="comment-text">${c.text.substring(0,100)}${c.text.length > 100 ? '...' : ''}</div>
-            `;
-            commentList.appendChild(div);
-        });
-        modal.style.display = 'flex';
+        // 3. 実行
+        processFormatting(null);
     }
 
-    function closeModal() { modal.style.display = 'none'; }
+    async function processFormatting(selectedComments) {
+        $('exec-btn').disabled = true;
+        await new Promise(r => setTimeout(r, 50));
 
-    document.getElementById('select-all').addEventListener('change', (e) => {
-        document.querySelectorAll('.comment-chk').forEach(c => c.checked = e.target.checked);
-    });
+        try {
+            let workingCode = input.value;
+            const config = {
+                fix: $('fix-lines').checked,
+                console: $('remove-console').checked,
+                empty: $('remove-empty').checked
+            };
 
-    document.getElementById('confirm-remove').addEventListener('click', () => {
+            // メタデータ保護
+            let metadata = "";
+            const metaMatch = workingCode.match(/\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==/);
+            const PLACEHOLDER = "/*__META_PROTECT__*/";
+            if (metaMatch) {
+                metadata = metaMatch[0];
+                const parts = workingCode.split(metadata);
+                workingCode = parts[0] + PLACEHOLDER + parts.slice(1).join(metadata);
+            }
+
+            // コメント削除
+            if (selectedComments) {
+                selectedComments.sort((a,b) => b.start - a.start).forEach(c => {
+                    let offset = 0;
+                    if (metaMatch && c.start > metaMatch.index) {
+                        offset = PLACEHOLDER.length - metadata.length;
+                    }
+                    const s = c.start + offset;
+                    const e = c.end + offset;
+                    if (s >= 0) workingCode = workingCode.substring(0, s) + workingCode.substring(e);
+                });
+            }
+
+            // コンソール削除
+            if (config.console) {
+                workingCode = workingCode.replace(/console\.(log|debug|info|warn|error|dir|table|trace)\s*\([\s\S]*?\);?/g, "");
+            }
+
+            // 整形
+            if (config.fix) {
+                workingCode = js_beautify(workingCode, {
+                    indent_size: 4,
+                    brace_style: "collapse,preserve-inline",
+                    max_preserve_newlines: 2,
+                    preserve_newlines: true
+                });
+            }
+
+            // 復元
+            if (metadata) workingCode = workingCode.split(PLACEHOLDER).join(metadata);
+
+            // 空行
+            if (config.empty) workingCode = workingCode.replace(/^\s*[\r\n]/gm, "");
+
+            output.value = workingCode;
+            updateUI();
+
+        } catch (e) {
+            alert("Error: " + e.message);
+        } finally {
+            $('exec-btn').disabled = false;
+        }
+    }
+
+    function findComments(text) {
+        const list = [];
+        const metaRegex = /\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==/;
+        const metaMatch = text.match(metaRegex);
+        const mStart = metaMatch ? metaMatch.index : -1;
+        const mEnd = metaMatch ? mStart + metaMatch[0].length : -1;
+        const regex = /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            let start = match.index + (match[1] ? match[1].length : 0);
+            if (start >= mStart && start < mEnd) continue;
+            list.push({ start, end: regex.lastIndex, text: match[0].trim() });
+        }
+        return list;
+    }
+
+    // --- UI Events ---
+    $('exec-btn').onclick = startProcess;
+
+    $('confirm-del').onclick = () => {
         const toRemove = [];
-        document.querySelectorAll('.comment-chk').forEach(chk => {
-            if (chk.checked) toRemove.push(detectedComments[chk.dataset.idx]);
-        });
+        document.querySelectorAll('.cmt-chk:checked').forEach(el => toRemove.push(detectedComments[el.dataset.idx]));
         closeModal();
-        startProcessing(toRemove);
-    });
-
-    function startProcessing(selectedComments) {
-        execBtn.disabled = true;
-        statusLabel.textContent = "Processing...";
-        
-        worker.postMessage({
-            code: inputArea.value,
-            options: {
-                fixLines: document.getElementById('fix-lines').checked,
-                removeConsole: document.getElementById('remove-console').checked,
-                removeEmpty: document.getElementById('remove-empty').checked
-            },
-            selectedComments: selectedComments
-        });
-    }
-
-    worker.onmessage = function(e) {
-        outputArea.value = e.data.finalCode;
-        updateLineNumbers(outputArea, outLineNums, 'out-count');
-        outputArea.scrollTop = 0;
-        outLineNums.style.transform = `translateY(0px)`;
-        execBtn.disabled = false;
-        statusLabel.textContent = "Done!";
-        setTimeout(() => statusLabel.textContent = "Ready", 2000);
+        processFormatting(toRemove);
     };
 
-    document.getElementById('copy-btn').addEventListener('click', () => {
-        outputArea.select();
+    $('copy-btn').onclick = () => {
+        output.select();
         document.execCommand('copy');
-        alert("Copied!");
-    });
+        const prev = $('copy-btn').textContent;
+        $('copy-btn').textContent = "Copied!";
+        setTimeout(() => $('copy-btn').textContent = prev, 1500);
+    };
 
-    updateLineNumbers(inputArea, inLineNums, 'in-count');
+    function updateUI() {
+        countLines(input, $('in-lines'), $('in-nums'));
+        countLines(output, $('out-lines'), $('out-nums'));
+    }
+
+    function countLines(textarea, label, numsDiv) {
+        const count = textarea.value.split('\n').length;
+        label.textContent = count.toLocaleString() + " lines";
+        if (count > 20000) { numsDiv.innerHTML = "<div>1-</div><div>" + count + "</div>"; return; }
+        let h = "";
+        for(let i=1; i<=count; i++) h += `<div>${i}</div>`;
+        numsDiv.innerHTML = h;
+    }
+
+    function showModal() {
+        const list = $('comment-list');
+        list.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        detectedComments.slice(0, 1000).forEach((c, i) => {
+            const row = document.createElement('div');
+            row.className = 'comment-row';
+            row.innerHTML = `<input type="checkbox" class="cmt-chk" checked data-idx="${i}"><div class="comment-text">${c.text.substring(0,100)}</div>`;
+            frag.appendChild(row);
+        });
+        list.appendChild(frag);
+        $('check-all').onclick = (e) => document.querySelectorAll('.cmt-chk').forEach(c => c.checked = e.target.checked);
+        $('modal').style.display = "flex";
+    }
+    function closeModal() { $('modal').style.display = "none"; }
+
+    const sync = (src, dst) => src.onscroll = () => dst.scrollTop = src.scrollTop;
+    sync(input, $('in-nums')); sync(output, $('out-nums'));
+    input.oninput = updateUI;
 </script>
-
 </body>
 </html>
