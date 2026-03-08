@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Userscript Formatter (Full JP Translation)</title>
+    <title>Userscript Formatter (JP Comment Filter)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jshint/2.13.6/jshint.min.js"></script>
     <style>
@@ -32,7 +32,6 @@
         }
         label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; user-select: none; }
         
-        /* Error Navigation Bar */
         #error-nav {
             display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger);
             border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;
@@ -48,19 +47,12 @@
         .nav-btn:hover { background: #dc2626; }
         
         .error-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-        /* エラーメッセージ（赤） */
         .error-msg { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        /* ヒント（黄） */
-        .fix-hint { 
-            font-size: 12px; color: #fbbf24; margin-top: 3px; 
-            display: flex; align-items: center; gap: 6px;
-            font-weight: normal;
-        }
+        .fix-hint { font-size: 12px; color: #fbbf24; margin-top: 3px; display: flex; align-items: center; gap: 6px; font-weight: normal; }
 
-        /* Editor */
         .main { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
         .pane { display: flex; flex-direction: column; background: var(--editor-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; position: relative; }
-        .bar { padding: 5px 10px; background: #334155; font-size: 11px; font-weight: bold; color: #94a3b8; display: flex; justify-content: space-between; }
+        .bar { padding: 5px 10px; background: #334155; font-size: 11px; font-weight: bold; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; }
         
         .editor-container { flex: 1; position: relative; display: flex; overflow: hidden; }
         .line-numbers {
@@ -76,38 +68,39 @@
         }
         textarea::selection { background-color: rgba(220, 38, 38, 0.6); color: white; }
 
-        .footer { padding-top: 10px; display: flex; justify-content: center; gap: 10px; }
+        .footer { padding-top: 10px; display: center; justify-content: center; gap: 10px; display: flex; }
         button.action-btn {
-            padding: 10px 30px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
+            padding: 10px 25px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;
         }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         #exec-btn { background: var(--primary); }
         #exec-btn:hover:not(:disabled) { background: #2563eb; }
         #copy-btn { background: var(--secondary); }
 
-        /* Modal */
         #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99; justify-content: center; align-items: center; }
         .modal-box { background: #1e293b; width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; border-radius: 8px; border: 1px solid var(--border); }
         .modal-body { flex: 1; overflow-y: auto; padding: 10px; }
         .comment-row { display: flex; gap: 10px; padding: 8px; border-bottom: 1px solid #334155; font-size: 12px; align-items: flex-start; }
         .comment-text { white-space: pre-wrap; word-break: break-all; color: #94a3b8; flex: 1; }
-        .modal-foot { padding: 10px; border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-foot { padding: 10px; border-top: 1px solid #334155; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+        .modal-btn-group { display: flex; gap: 10px; }
+        .mini-btn { padding: 4px 8px; font-size: 10px; background: #475569; border: none; color: white; border-radius: 3px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1 style="margin:0; font-size:16px; color:#e2e8f0;">Userscript Cleaner <span style="color:var(--primary); font-size:0.8em; margin-left:10px;">Full JP Translation</span></h1>
+    <h1 style="margin:0; font-size:16px; color:#e2e8f0;">Userscript Cleaner <span style="color:var(--primary); font-size:0.8em; margin-left:10px;">JP Comment Filter</span></h1>
 </div>
 
 <div class="settings">
     <label><input type="checkbox" id="fix-lines" checked> 行を正す</label>
-    <label><input type="checkbox" id="remove-comments" checked> コメント選択削除</label>
+    <label><input type="checkbox" id="remove-comments" checked> コメント削除</label>
+    <label style="margin-left:-10px; color:var(--primary); opacity:0.9;"><input type="checkbox" id="only-jp"> (日本語のみ対象)</label>
     <label><input type="checkbox" id="remove-console"> コンソール消す</label>
     <label><input type="checkbox" id="remove-empty" checked> 空白行消す</label>
 </div>
 
-<!-- Error Navigation -->
 <div id="error-nav">
     <div class="nav-controls">
         <button class="nav-btn" title="前へ" onclick="prevError()">&#8592;</button>
@@ -147,12 +140,18 @@
     <div class="modal-box">
         <div class="bar" style="border-radius:8px 8px 0 0; padding:10px;">
             <span>削除するコメントを選択</span>
-            <label><input type="checkbox" id="check-all" checked> 全選択/解除</label>
+            <div style="display:flex; gap:10px;">
+                <button class="mini-btn" id="sel-jp-btn">日本語のみ選択</button>
+                <label><input type="checkbox" id="check-all" checked> 全選択/解除</label>
+            </div>
         </div>
         <div class="modal-body" id="comment-list"></div>
         <div class="modal-foot">
-            <button class="action-btn" onclick="closeModal()" style="background:#475569">キャンセル</button>
-            <button class="action-btn" id="confirm-del" style="background:var(--primary)">削除して続行</button>
+            <span id="modal-count" style="font-size:11px; color:#94a3b8;"></span>
+            <div class="modal-btn-group">
+                <button class="action-btn" onclick="closeModal()" style="background:#475569">キャンセル</button>
+                <button class="action-btn" id="confirm-del" style="background:var(--primary)">削除して続行</button>
+            </div>
         </div>
     </div>
 </div>
@@ -164,145 +163,38 @@
     let syntaxErrors = [];
     let currentErrorIndex = -1;
 
-    // --- 【強化版】エラーメッセージ翻訳エンジン ---
+    // 日本語判定関数 (ASCII以外が含まれるか)
+    const hasJP = (str) => /[^\x00-\x7F]/.test(str);
+
+    // --- エラー翻訳/ヒント (省略なし) ---
     function translateError(msg, evidence) {
         if (!msg) return "不明なエラー";
         let translated = msg;
-
-        // --- 1. 変数・定義系 ---
-        if (msg.match(/'(.*)' is not defined/)) {
-            translated = msg.replace(/'(.*)' is not defined/, "変数 '$1' は定義されていません (宣言漏れ)。");
-        } else if (msg.match(/'(.*)' is already defined/)) {
-            translated = msg.replace(/'(.*)' is already defined/, "変数 '$1' は既に定義されています (重複宣言)。");
-        } else if (msg.match(/Attempting to override '(.*)' which is a constant/)) {
-            translated = msg.replace(/Attempting to override '(.*)' which is a constant/, "定数 '$1' を書き換えようとしています。");
-        } else if (msg.match(/Read only/)) {
-            translated = "読み取り専用のプロパティには代入できません。";
-        }
-
-        // --- 2. 構文・記号系 (Expected / Unexpected) ---
-        else if (msg.match(/Expected '(.*)' and instead saw '(.*)'/)) {
-            // 例: Expected '}' and instead saw 'return'
-            translated = msg.replace(/Expected '(.*)' and instead saw '(.*)'/, "本来 '$1' があるべき場所に '$2' があります。");
-        } else if (msg.match(/Unexpected '(.*)'/)) {
-            translated = msg.replace(/Unexpected '(.*)'/, "ここに文字 '$1' は置けません（予期しない文字）。");
-        } else if (msg.match(/Expected an identifier and instead saw '(.*)'/)) {
-            translated = msg.replace(/Expected an identifier and instead saw '(.*)'/, "変数名などの識別子が必要ですが、代わりに '$1' があります。");
-        } else if (msg.match(/Expected an operator and instead saw '(.*)'/)) {
-            translated = msg.replace(/Expected an operator and instead saw '(.*)'/, "演算子(+, -, = 等)が必要ですが、代わりに '$1' があります。");
-        } else if (msg.match(/Expected an assignment or function call/)) {
-            translated = "代入式か関数呼び出しであるべきですが、式の結果が使われていません。";
-        }
-
-        // --- 3. 括弧・ブロック系 ---
-        else if (msg.match(/Unmatched '(.*)'/)) {
-            translated = msg.replace(/Unmatched '(.*)'/, "対応する括弧 '$1' が見つかりません (閉じ忘れ/過剰)。");
-        } else if (msg.match(/Missing semicolon/)) {
-            translated = "行末にセミコロン ';' が抜けています。";
-        } else if (msg.match(/Unnecessary semicolon/)) {
-            translated = "不要なセミコロン ';' があります。";
-        } else if (msg.match(/Unexpected early end of program/)) {
-            translated = "コードが途中で途切れています (閉じ括弧 '}' などが足りません)。";
-        } else if (msg.match(/Don't make functions within a loop/)) {
-            translated = "ループの中で関数を作成するのは推奨されません。";
-        }
-
-        // --- 4. 文字列・数値系 ---
-        else if (msg.match(/Unclosed string/)) {
-            translated = "文字列が閉じられていません (クォートの忘れ)。";
-        } else if (msg.match(/Unclosed regular expression/)) {
-            translated = "正規表現が閉じられていません。";
-        } else if (msg.match(/A leading decimal point can be confused with a dot/)) {
-            translated = "先頭の小数点はドット演算子と紛らわしいです ('0.5' と書いてください)。";
-        } else if (msg.match(/Trailing decimal point/)) {
-            translated = "末尾の小数点は紛らわしいです。";
-        }
-
-        // --- 5. 比較・論理系 ---
-        else if (msg.match(/Use '===' to compare/)) {
-            translated = "比較には厳密な '===' を使用してください。";
-        } else if (msg.match(/Confusing use of '!'/)) {
-            translated = "'!' の使い方が紛らわしいです。";
-        } else if (msg.match(/Bad option/)) {
-            translated = "JSHintの設定オプションが不正です。";
-        } else if (msg.match(/This is an ES(.*) feature/)) {
-            translated = "これは新しいJavaScript(ES$1)の機能です。";
-        }
-
-        // --- 6. 汎用置換 (上記に漏れた場合用) ---
-        // 最後に残った英語の専門用語を置換する
-        translated = translated
-            .replace("Expected", "期待される文字:")
-            .replace("Unexpected", "予期せぬ:")
-            .replace("identifier", "識別子(変数名)")
-            .replace("operator", "演算子")
-            .replace("string", "文字列")
-            .replace("number", "数値")
-            .replace("at line", "行:")
-            .replace("character", "文字目");
-
+        if (msg.match(/'(.*)' is not defined/)) translated = msg.replace(/'(.*)' is not defined/, "変数 '$1' は定義されていません。");
+        else if (msg.match(/'(.*)' is already defined/)) translated = msg.replace(/'(.*)' is already defined/, "変数 '$1' は既に定義されています。");
+        else if (msg.match(/Expected '(.*)' and instead saw '(.*)'/)) translated = msg.replace(/Expected '(.*)' and instead saw '(.*)'/, "本来 '$1' があるべき場所に '$2' があります。");
+        else if (msg.match(/Unexpected '(.*)'/)) translated = msg.replace(/Unexpected '(.*)'/, "ここに文字 '$1' は置けません。");
+        else if (msg.match(/Unmatched '(.*)'/)) translated = msg.replace(/Unmatched '(.*)'/, "括弧 '$1' のペアが正しくありません。");
+        else if (msg.match(/Missing semicolon/)) translated = "行末の ';' が抜けています。";
         return translated;
     }
 
-    // --- AI風ヒント生成 ---
     function generateFixHint(err) {
-        const msg = (err.reason || "").toLowerCase();
-        const code = (err.evidence || "").trim();
         const rawCode = err.evidence || "";
-
-        // 1. タイプミス系
-        if (code.match(/\bcon\b/) && !code.match(/\bconsole\b/)) return "変数宣言の 'const' を 'con' と書き間違えていませんか？";
-        if (code.match(/\bfuction\b/)) return "'function' のスペルミス (fuction) です。";
-        if (code.match(/\bretun\b|\bretrun\b|\burn\b/)) return "'return' のスペルミス (urn, retunなど) です。";
-        if (code.match(/\bvarible\b/)) return "'variable' のスペルミスです。";
-        if (code.match(/\blenght\b/)) return ".length のスペルミス (lenght) です。";
-        if (code.match(/\biff\b/)) return "'if' 文のスペルミス (iff) です。";
-        if (code.match(/\beles\b|\bels\b/)) return "'else' のスペルミスです。";
-        
-        // 2. 構文系
-        if (msg.includes("missing semicolon")) return "行末にセミコロン ';' を追加してください。";
-        if (msg.includes("unmatched")) return "対応する括弧 {} [] () が見つかりません。数を確認してください。";
-        if (msg.includes("is not defined")) return "let または const で変数を宣言してください。";
-        
-        // 3. 記号系
-        if (code.includes("=>") && (msg.includes("expected") || msg.includes("identifier"))) {
-            return "アロー関数の書き方を確認してください。";
-        }
-        if (msg.includes("unexpected token") && code.includes(":")) {
-            if (!code.match(/\{.*\}/) && !code.match(/case\s+.*:/)) {
-                return "ここで ':' は使えません。代入なら '=' です。";
-            }
-        }
-
-        // 4. 文字列系
-        if (msg.includes("unterminated string")) return "文字列の終わりが見つかりません。クォートを閉じてください。";
-        
-        // 5. 全角文字
         if (rawCode.match(/[　]/)) return "全角スペースが含まれています。半角に直してください。";
         if (rawCode.match(/[：；，（）]/)) return "全角記号が含まれています。半角に直してください。";
-
-        return "赤くハイライトされた箇所周辺の記号やスペルを確認してください。";
+        return "周辺の記号やスペルを確認してください。";
     }
 
-    // --- エラー表示制御 ---
     function updateErrorDisplay() {
         const nav = $('error-nav');
-        if (syntaxErrors.length === 0) {
-            nav.style.display = 'none';
-            return;
-        }
-        
+        if (syntaxErrors.length === 0) { nav.style.display = 'none'; return; }
         nav.style.display = 'flex';
         const err = syntaxErrors[currentErrorIndex];
-        
-        // エラーカウントと日本語化されたメッセージを表示
         $('error-count').textContent = `${currentErrorIndex + 1} / ${syntaxErrors.length}`;
         $('error-msg').textContent = `Line ${err.line}: ${translateError(err.reason, err.evidence)}`;
-        
-        // ヒント
         const hint = generateFixHint(err);
         $('fix-hint').innerHTML = hint ? `💡 ${hint}` : '';
-        
         jumpToError(err);
     }
 
@@ -311,27 +203,14 @@
         const lineHeight = 20; 
         const scrollPos = (err.line - 1) * lineHeight - (input.clientHeight / 2);
         input.scrollTop = scrollPos;
-
         const lines = input.value.split('\n');
         let charIndex = 0;
-        for (let i = 0; i < err.line - 1; i++) {
-            charIndex += lines[i].length + 1; 
-        }
-        const lineText = lines[err.line - 1] || "";
-        input.setSelectionRange(charIndex, charIndex + lineText.length);
+        for (let i = 0; i < err.line - 1; i++) charIndex += lines[i].length + 1; 
+        input.setSelectionRange(charIndex, charIndex + (lines[err.line - 1] || "").length);
     }
 
-    function prevError() {
-        if (syntaxErrors.length === 0) return;
-        currentErrorIndex = (currentErrorIndex - 1 + syntaxErrors.length) % syntaxErrors.length;
-        updateErrorDisplay();
-    }
-
-    function nextError() {
-        if (syntaxErrors.length === 0) return;
-        currentErrorIndex = (currentErrorIndex + 1) % syntaxErrors.length;
-        updateErrorDisplay();
-    }
+    function prevError() { currentErrorIndex = (currentErrorIndex - 1 + syntaxErrors.length) % syntaxErrors.length; updateErrorDisplay(); }
+    function nextError() { currentErrorIndex = (currentErrorIndex + 1) % syntaxErrors.length; updateErrorDisplay(); }
 
     // --- メイン処理 ---
     async function startProcess() {
@@ -342,13 +221,7 @@
         $('error-nav').style.display = 'none';
         syntaxErrors = [];
 
-        // 1. JSHint チェック
-        const options = { 
-            esversion: 11, browser: true, devel: true, 
-            asi: true, undef: false, '-W041': true
-        };
-        JSHINT(code, options);
-        
+        JSHINT(code, { esversion: 11, browser: true, devel: true, asi: true, undef: false });
         const criticalErrors = JSHINT.errors.filter(e => e && e.code && e.code.startsWith('E'));
 
         if (criticalErrors.length > 0) {
@@ -356,10 +229,9 @@
             currentErrorIndex = 0;
             updateErrorDisplay();
             $('exec-btn').disabled = false;
-            return; // エラー時はここで中断
+            return;
         }
 
-        // 2. コメント選択
         if ($('remove-comments').checked) {
             detectedComments = findComments(code);
             if (detectedComments.length > 0) {
@@ -368,75 +240,42 @@
                 return;
             }
         }
-
-        // 3. 実行
         processFormatting(null);
     }
 
     async function processFormatting(selectedComments) {
         $('exec-btn').disabled = true;
-        await new Promise(r => setTimeout(r, 50));
-
         try {
             let workingCode = input.value;
-            const config = {
-                fix: $('fix-lines').checked,
-                console: $('remove-console').checked,
-                empty: $('remove-empty').checked
-            };
-
-            // メタデータ保護
-            let metadata = "";
             const metaMatch = workingCode.match(/\/\/\s*==UserScript==[\s\S]*?\/\/\s*==\/UserScript==/);
             const PLACEHOLDER = "/*__META_PROTECT__*/";
+            let metadata = "";
             if (metaMatch) {
                 metadata = metaMatch[0];
-                const parts = workingCode.split(metadata);
-                workingCode = parts[0] + PLACEHOLDER + parts.slice(1).join(metadata);
+                workingCode = workingCode.replace(metadata, PLACEHOLDER);
             }
 
-            // コメント削除
             if (selectedComments) {
                 selectedComments.sort((a,b) => b.start - a.start).forEach(c => {
-                    let offset = 0;
-                    if (metaMatch && c.start > metaMatch.index) {
-                        offset = PLACEHOLDER.length - metadata.length;
-                    }
-                    const s = c.start + offset;
-                    const e = c.end + offset;
-                    if (s >= 0) workingCode = workingCode.substring(0, s) + workingCode.substring(e);
+                    workingCode = workingCode.substring(0, c.start) + workingCode.substring(c.end);
                 });
             }
 
-            // コンソール削除
-            if (config.console) {
+            if ($('remove-console').checked) {
                 workingCode = workingCode.replace(/console\.(log|debug|info|warn|error|dir|table|trace)\s*\([\s\S]*?\);?/g, "");
             }
 
-            // 整形
-            if (config.fix) {
-                workingCode = js_beautify(workingCode, {
-                    indent_size: 4,
-                    brace_style: "collapse,preserve-inline",
-                    max_preserve_newlines: 2,
-                    preserve_newlines: true
-                });
+            if ($('fix-lines').checked) {
+                workingCode = js_beautify(workingCode, { indent_size: 4, brace_style: "collapse,preserve-inline" });
             }
 
-            // 復元
-            if (metadata) workingCode = workingCode.split(PLACEHOLDER).join(metadata);
+            if (metadata) workingCode = workingCode.replace(PLACEHOLDER, metadata);
+            if ($('remove-empty').checked) workingCode = workingCode.replace(/^\s*[\r\n]/gm, "");
 
-            // 空行
-            if (config.empty) workingCode = workingCode.replace(/^\s*[\r\n]/gm, "");
-
-            output.value = workingCode;
+            output.value = workingCode.trim();
             updateUI();
-
-        } catch (e) {
-            alert("Error: " + e.message);
-        } finally {
-            $('exec-btn').disabled = false;
-        }
+        } catch (e) { alert(e.message); }
+        $('exec-btn').disabled = false;
     }
 
     function findComments(text) {
@@ -445,18 +284,46 @@
         const metaMatch = text.match(metaRegex);
         const mStart = metaMatch ? metaMatch.index : -1;
         const mEnd = metaMatch ? mStart + metaMatch[0].length : -1;
+        
         const regex = /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm;
         let match;
         while ((match = regex.exec(text)) !== null) {
             let start = match.index + (match[1] ? match[1].length : 0);
             if (start >= mStart && start < mEnd) continue;
-            list.push({ start, end: regex.lastIndex, text: match[0].trim() });
+            const commentText = match[0].trim();
+            list.push({ start, end: regex.lastIndex, text: commentText, isJP: hasJP(commentText) });
         }
         return list;
     }
 
-    // --- UI Events ---
-    $('exec-btn').onclick = startProcess;
+    function showModal() {
+        const list = $('comment-list');
+        list.innerHTML = "";
+        const onlyJPFilter = $('only-jp').checked;
+        
+        let count = 0;
+        detectedComments.forEach((c, i) => {
+            if (onlyJPFilter && !c.isJP) return;
+            const row = document.createElement('div');
+            row.className = 'comment-row';
+            row.innerHTML = `<input type="checkbox" class="cmt-chk" checked data-idx="${i}" data-jp="${c.isJP}"><div class="comment-text">${c.text.substring(0,150)}</div>`;
+            list.appendChild(row);
+            count++;
+        });
+
+        $('modal-count').textContent = `対象: ${count} 件`;
+        $('modal').style.display = "flex";
+    }
+
+    $('sel-jp-btn').onclick = () => {
+        document.querySelectorAll('.cmt-chk').forEach(cb => {
+            cb.checked = (cb.dataset.jp === "true");
+        });
+    };
+
+    $('check-all').onclick = (e) => {
+        document.querySelectorAll('.cmt-chk').forEach(cb => cb.checked = e.target.checked);
+    };
 
     $('confirm-del').onclick = () => {
         const toRemove = [];
@@ -465,12 +332,11 @@
         processFormatting(toRemove);
     };
 
+    function closeModal() { $('modal').style.display = "none"; }
+    $('exec-btn').onclick = startProcess;
     $('copy-btn').onclick = () => {
-        output.select();
-        document.execCommand('copy');
-        const prev = $('copy-btn').textContent;
-        $('copy-btn').textContent = "Copied!";
-        setTimeout(() => $('copy-btn').textContent = prev, 1500);
+        output.select(); document.execCommand('copy');
+        const b = $('copy-btn'); b.textContent = "Copied!"; setTimeout(() => b.textContent = "結果をコピー", 1500);
     };
 
     function updateUI() {
@@ -481,27 +347,12 @@
     function countLines(textarea, label, numsDiv) {
         const count = textarea.value.split('\n').length;
         label.textContent = count.toLocaleString() + " lines";
-        if (count > 20000) { numsDiv.innerHTML = "<div>1-</div><div>" + count + "</div>"; return; }
         let h = "";
-        for(let i=1; i<=count; i++) h += `<div>${i}</div>`;
+        const limit = Math.min(count, 5000); 
+        for(let i=1; i<=limit; i++) h += `<div>${i}</div>`;
+        if(count > 5000) h += `<div>...</div>`;
         numsDiv.innerHTML = h;
     }
-
-    function showModal() {
-        const list = $('comment-list');
-        list.innerHTML = "";
-        const frag = document.createDocumentFragment();
-        detectedComments.slice(0, 1000).forEach((c, i) => {
-            const row = document.createElement('div');
-            row.className = 'comment-row';
-            row.innerHTML = `<input type="checkbox" class="cmt-chk" checked data-idx="${i}"><div class="comment-text">${c.text.substring(0,100)}</div>`;
-            frag.appendChild(row);
-        });
-        list.appendChild(frag);
-        $('check-all').onclick = (e) => document.querySelectorAll('.cmt-chk').forEach(c => c.checked = e.target.checked);
-        $('modal').style.display = "flex";
-    }
-    function closeModal() { $('modal').style.display = "none"; }
 
     const sync = (src, dst) => src.onscroll = () => dst.scrollTop = src.scrollTop;
     sync(input, $('in-nums')); sync(output, $('out-nums'));
